@@ -48,61 +48,99 @@ files = os.listdir(hexFolder)
 maxline = 8
 maxfile = len (files)
 
+def downButton ( channel=0 ):
+    print (channel )
+    global selecty
+    selecty = ( maxfile + selecty + 1 ) % maxfile 
+    #time.sleep(0.1)
+    #printFilesOLED()
+
+def upButton ( channel=0 ):
+    print (channel )
+    global selecty
+    selecty = ( maxfile + selecty - 1 ) % maxfile 
+    #time.sleep(0.1)
+    #printFilesOLED()
+
+def uploadSelected ( channel=0 ):
+    print (channel )
+    try:
+        with canvas(device) as draw:
+            draw.rectangle((0, 0, 128, 64), outline=255, fill=255)
+            draw.text((10, 24), "Uploading!",  font=font, fill=0)
+        resetArdu()
+        time.sleep(1.100)
+        tmpcmd = uploadCmd + hexFolder + files[selecty] + ':i'
+        subprocess.check_output(tmpcmd, shell = True )
+        with canvas(device) as draw:
+            draw.rectangle((0, 0, 128, 64), outline=255, fill=255)
+            draw.text((10, 32), "Upload Success!",  font=font, fill=0)
+        time.sleep(1.5)
+        #continue 
+    except:
+        with canvas(device) as draw:
+            draw.rectangle((0, 0, 128, 64), outline=255, fill=255)
+            draw.text((10, 24), "Could not upload!",  font=font, fill=0)
+            draw.text((10, 32), "Try Again!",  font=font, fill=0)
+        time.sleep(1.5)
+        #continue
+        pass
+
+def shutdown ( channel=0 ):
+    curentTime = time.time()
+    while not GPIO.input(KEY3_PIN):
+        passtime = time.time() - curentTime
+        with canvas(device) as draw:
+            draw.text((1, 15), "shutting down in ",  font=font, fill=1)
+            draw.text((50, 32), "%.1f" % (3 - passtime),  font=font, fill=1)
+        time.sleep(0.5)
+        print ("shutting Down in %f" % (3 - passtime) ) 
+        if time.time() - curentTime > 3 : 
+            print("shuttingDown")
+            subprocess.check_output("shutdown -h now", shell=True)
+
+def printFilesOLED( channel=0 ):
+    global curtop
+    global selecty
+    global font
+    global x
+    with canvas(device) as draw:
+        if not os.path.exists(raspiDevfile):
+            draw.ellipse((118,0,126,8), outline=255, fill=1)
+        draw.rectangle((0, 3*8, 128, 4*8), outline=255, fill=255)
+        for i in range(selecty-3,selecty+4):
+            curtop = curtop + 8
+            if i >= maxfile: i = i % maxfile
+            if (i==selecty): 
+                fillType = 0
+            else:
+                fillType = 255
+            draw.text((x+1, curtop), files[i].split(".")[0],  font=font, fill=fillType)
+            #print(i, files[i], files[i].split('.')[0])
+
+def mainUI ( channel=0 ):
+    pass
+
 if __name__ == "__main__":
+    GPIO.add_event_detect(KEY_DOWN_PIN, GPIO.FALLING, callback=downButton, bouncetime=200)
+    GPIO.add_event_detect(KEY_UP_PIN, GPIO.FALLING, callback=upButton, bouncetime=200)
+    GPIO.add_event_detect(KEY2_PIN, GPIO.FALLING, callback=uploadSelected, bouncetime=200)
+    GPIO.add_event_detect(KEY3_PIN, GPIO.FALLING, callback=shutdown, bouncetime=200)
     while True:
         curtop = top - 8 
-        if not GPIO.input(KEY3_PIN):
-            curentTime = time.time()
-            while not GPIO.input(KEY3_PIN):
-                passtime = time.time() - curentTime
-                with canvas(device) as draw:
-                    draw.text((1, 15), "shutting down in ",  font=font, fill=1)
-                    draw.text((50, 32), "%.1f"%(3-passtime),  font=font, fill=1)
-                time.sleep(0.5)
-                print ("shutting Down in %f" % (3 - passtime) ) 
-                if time.time() - curentTime > 3 : 
-                    print("shuttingDown")
-                    subprocess.check_output("shutdown -h now", shell=True)
-
-        if not GPIO.input(KEY_DOWN_PIN): 
-            selecty = ( maxfile + selecty + 1 ) % maxfile 
-            time.sleep(0.2)
-        if not GPIO.input(KEY_UP_PIN): 
-            selecty = ( maxfile + selecty - 1 ) % maxfile 
-            time.sleep(0.2)
-        if not GPIO.input(KEY2_PIN):
-                try:
-                    with canvas(device) as draw:
-                        draw.rectangle((0, 0, 128, 64), outline=255, fill=255)
-                        draw.text((10, 24), "Uploading!",  font=font, fill=0)
-                    resetArdu()
-                    time.sleep(1.100)
-                    tmpcmd = uploadCmd + hexFolder + files[selecty] + ':i'
-                    subprocess.check_output(tmpcmd, shell = True )
-                    with canvas(device) as draw:
-                        draw.rectangle((0, 0, 128, 64), outline=255, fill=255)
-                        draw.text((10, 32), "Upload Success!",  font=font, fill=0)
-                    time.sleep(1.5)
-                    continue 
-                except:
-                    with canvas(device) as draw:
-                        draw.rectangle((0, 0, 128, 64), outline=255, fill=255)
-                        draw.text((10, 24), "Could not upload!",  font=font, fill=0)
-                        draw.text((10, 32), "Try Again!",  font=font, fill=0)
-                    time.sleep(1.5)
-                    continue
-                    pass
-            
-        with canvas(device) as draw:
-            if not os.path.exists(raspiDevfile):
-                draw.ellipse((118,0,126,8), outline=255, fill=1)
-            draw.rectangle((0, 3*8, 128, 4*8), outline=255, fill=255)
-            for i in range(selecty-3,selecty+4):
-                curtop = curtop + 8
-                if i >= maxfile: i = i % maxfile
-                if (i==selecty): 
-                    draw.text((x+1, curtop), files[i].split(".")[0],  font=font, fill=0)
-                else:
-                    draw.text((x+1, curtop), files[i].split(".")[0],  font=font, fill=255)
+        #if not GPIO.input(KEY3_PIN):
+        #    shutdown()
+        #if not GPIO.input(KEY_DOWN_PIN): 
+        #    downButton()
+            #selecty = ( maxfile + selecty + 1 ) % maxfile 
+        #    time.sleep(0.2)
+        #if not GPIO.input(KEY_UP_PIN): 
+        #    upButton()
+            #selecty = ( maxfile + selecty - 1 ) % maxfile 
+        #    time.sleep(0.2)
+        #if not GPIO.input(KEY2_PIN):
+        #    uploadSelected()
+        printFilesOLED()
+        time.sleep(0.5) 
     GPIO.cleanup()
 

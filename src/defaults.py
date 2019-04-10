@@ -1,3 +1,9 @@
+import RPi.GPIO as GPIO
+
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+
 # Create blank image for drawing.
 # Make sure to create image with mode '1' for 1-bit color.
 width = 128
